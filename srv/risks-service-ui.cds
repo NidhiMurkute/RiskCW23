@@ -168,4 +168,3 @@ annotate RiskService.Risks with {
     }
     );
 };
-

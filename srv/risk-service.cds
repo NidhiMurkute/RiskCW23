@@ -3,7 +3,7 @@ using {  API_BUSINESS_PARTNER as external } from '../srv/external/API_BUSINESS_P
 
 @path: 'service/risk'
 service RiskService {
- entity Risks @(restrict : [
+  entity Risks @(restrict : [
             {
                 grant : [ 'READ' ],
                 to : [ 'RiskViewer' ]
@@ -14,7 +14,7 @@ service RiskService {
             }
         ]) as projection on my.Risks;
     annotate Risks with @odata.draft.enabled;
-   entity Mitigations @(restrict : [
+  entity Mitigations @(restrict : [
             {
                 grant : [ 'READ' ],
                 to : [ 'RiskViewer' ]
@@ -25,9 +25,6 @@ service RiskService {
             }
         ]) as projection on my.Mitigations;
     annotate Mitigations with @odata.draft.enabled;
-     entity BusinessPartners as projection on my.BusinessPartners;
-      entity BuPaIndustry as projection on external.A_BuPaIndustry;
-
-     
+    entity BusinessPartners as projection on my.BusinessPartners;
+    entity BuPaIndustry as projection on external.A_BuPaIndustry;
 }
-
