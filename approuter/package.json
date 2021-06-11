@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node node_modules/@sap/approuter/approuter.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sap/approuter": "^10.4.1"
+    "@sap/approuter": "^10.4.1",
+    "@sap/xsenv": "^3.1.0"
   },
   "engines": {
     "node": "^14.0.0"

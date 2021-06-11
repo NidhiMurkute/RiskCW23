@@ -18,7 +18,7 @@ build-parameters:
       - npx -p @sap/cds-dk cds build --production
       - bash -c "cds -v 2>/dev/null >/dev/null || npm install --no-save @sap/cds-dk"
       - npx cds build --production
-      - bash -c 'find gen -type f \( -name '*.csv' -or -name '*.hdbtabledata' \) | xargs rm -f'
+    #  - bash -c 'find gen -type f \( -name '*.csv' -or -name '*.hdbtabledata' \) | xargs rm -f'
       - mkdir gen/ui-resources 
 
 modules:
@@ -29,24 +29,22 @@ modules:
    path: gen/srv
    requires:
     # Resources extracted from CAP configuration
-    - name: cpapp-db
     - name: cpapp-uaa
+    - name: cpapp-service-manager
+   properties:
+      SAP_JWT_TRUST_ACL: |
+        [
+          {"clientid":"*","identityzone":"sap-provisioning"}
+        ]   
    provides:
     - name: srv-api      # required by consumers of CAP services (e.g. approuter)
       properties:
         srv-url: ${default-url}
+    - name: srv-multi-tenancy
+      properties:
+          tenant-delimiter: '-'     
 
  # -------------------- SIDECAR MODULE ------------------------
- - name: cpapp-db-deployer
- # ------------------------------------------------------------
-   type: hdb
-   path: gen/db  
-   parameters:
-     buildpack: nodejs_buildpack
-   requires:
-    # 'hana' and 'xsuaa' resources extracted from CAP configuration
-    - name: cpapp-db
-    - name: cpapp-uaa
 
  - name: cpapp-ui-resources
    type: com.sap.application.content
@@ -97,6 +95,7 @@ modules:
       - name: cpapp-uaa
       - name: cpapp-portal
       - name: cpapp-html5-repo-runtime
+      - name: cpapp-saas-registry
       - name: srv-api
         group: destinations
         properties:
@@ -104,6 +103,21 @@ modules:
           strictSSL: true
           name: srv-api
           url: '~{srv-url}'
+      - name: srv-multi-tenancy
+   properties:
+      TENANT_HOST_PATTERN: '^(.*)~{srv-multi-tenancy/tenant-delimiter}${default-host}.${default-domain}'
+      SAP_JWT_TRUST_ACL: |
+        [
+          {"clientid":"*","identityzone":"sap-provisioning"}
+        ]
+   parameters:
+      routes:
+        - route: '${default-url}'
+   provides:
+      - name: app-binding
+        properties:
+          app-fqdn: '${default-host}.${default-domain}'
+          app-url: 'https://~{app-binding/app-fqdn}'     
     
           
  - name: cpapp-portal-content-deployer
@@ -126,25 +140,20 @@ resources:
  # services extracted from CAP configuration
  # 'service-plan' can be configured via 'cds.requires.<name>.vcap.plan'
 # ------------------------------------------------------------
- - name: cpapp-db
-# ------------------------------------------------------------
-   type: com.sap.xs.hdi-container
-   parameters:
-     service: hana  # or 'hanatrial' on trial landscapes
-     service-plan: hdi-shared
-   properties:
-     hdi-service-name: ${service-name}
+ 
 # ------------------------------------------------------------
  - name: cpapp-uaa
 # ------------------------------------------------------------
    type: org.cloudfoundry.managed-service
+   requires:
+      - name: app-binding
+      - name: srv-multi-tenancy
    parameters:
      service: xsuaa
      service-plan: application  
      path: ./xs-security.json
      config:
        xsappname: cpapp-${space}    #  name + space dependency
-       tenant-mode: dedicated
        role-collections:
           - name: 'RiskManager-${space}'
             description: Manage Risks
@@ -154,6 +163,11 @@ resources:
             description: View Risks
             role-template-references:
               - $XSAPPNAME.RiskViewer
+     oauth2-configuration:
+          credential-types:
+            - binding-secret
+          redirect-uris:
+            - 'https://*~{srv-multi-tenancy/tenant-delimiter}~{app-binding/app-fqdn}/login/callback'          
 
  - name: cpapp-portal
    type: org.cloudfoundry.managed-service
@@ -171,6 +185,28 @@ resources:
    type: org.cloudfoundry.managed-service
    parameters:
       service-plan: app-host
-      service: html5-apps-repo             
+      service: html5-apps-repo     
+
+ - name: cpapp-service-manager
+   type: org.cloudfoundry.managed-service
+   parameters:
+      service: service-manager
+      service-plan: container    
+
+ - name: cpapp-saas-registry
+   type: org.cloudfoundry.managed-service
+   requires:
+      - name: app-binding
+   parameters:
+      service: saas-registry
+      service-plan: application
+      config:
+        xsappname: 'cpapp-${space}'
+        appUrls:
+          getDependencies: '~{app-binding/app-url}/callback/v1.0/dependencies'
+          onSubscription: '~{app-binding/app-url}/callback/v1.0/tenants/{tenantId}'
+        displayName: 'Risk Management (${space})'
+        description: Risk Management SaaS Application
+        category: CAP                
 
 
