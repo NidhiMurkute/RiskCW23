@@ -56,7 +56,15 @@
       "uaa": {
         "kind": "xsuaa",
         "credentials": {}
+      },
+      "API_BUSINESS_PARTNER": {
+        "kind": "odata",
+        "model": "srv/external/API_BUSINESS_PARTNER",
+        "credentials": {
+          "destination": "cap-api098"
+        }
       }
+      
     },
     "hana": {
       "deploy-format": "hdbtable"

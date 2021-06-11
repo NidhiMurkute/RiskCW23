@@ -8,6 +8,7 @@ using { managed } from '@sap/cds/common';
     descr       : String;
     miti        : Association to Mitigations;
     impact      : Integer;
+    bp          : Association to BusinessPartners;
     criticality : Integer;
   }
 
@@ -17,4 +18,13 @@ using { managed } from '@sap/cds/common';
     owner        : String;
     timeline     : String;
     risks        : Association to many Risks on risks.miti = $self;
+  }
+
+   // using an external service from
+  using {  API_BUSINESS_PARTNER as external } from '../srv/external/API_BUSINESS_PARTNER.csn';
+  entity BusinessPartners as projection on external.A_BusinessPartner {
+    key BusinessPartner as ID,
+    BusinessPartnerFullName as businessPartnerFullName,
+    BusinessPartnerIsBlocked as businessPartnerIsBlocked,
+    SearchTerm1 as searchTerm1
   }
